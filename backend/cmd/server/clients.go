@@ -1,46 +1,33 @@
 package main
 
 import (
-	"database/sql"
-	"fmt"
 	"log"
 	"os"
-
-	_ "github.com/mattn/go-sqlite3"
 )
 
-// Clients holds all external service clients
+// Clients holds all external service configuration
 type Clients struct {
-	DB *sql.DB
+	TursoURL   string
+	TursoToken string
 	// Add Gemini and Telegram clients here later
 }
 
-// InitClients initializes all external connections
+// InitClients reads environment variables for all external connections
 func InitClients() (*Clients, error) {
-	dbPath := os.Getenv("DATABASE_PATH")
-	if dbPath == "" {
-		dbPath = "./database/tracker.db"
+	tursoURL := os.Getenv("TURSO_DATABASE_URL")
+	if tursoURL == "" {
+		log.Fatal("TURSO_DATABASE_URL is required")
 	}
 
-	db, err := sql.Open("sqlite3", dbPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open database: %w", err)
+	tursoToken := os.Getenv("TURSO_AUTH_TOKEN")
+	if tursoToken == "" {
+		log.Fatal("TURSO_AUTH_TOKEN is required")
 	}
 
-	if err := db.Ping(); err != nil {
-		return nil, fmt.Errorf("failed to ping database: %w", err)
-	}
-
-	log.Println("Database client initialized successfully")
+	log.Println("Client configuration loaded successfully")
 
 	return &Clients{
-		DB: db,
+		TursoURL:   tursoURL,
+		TursoToken: tursoToken,
 	}, nil
-}
-
-// Close closes all client connections
-func (c *Clients) Close() {
-	if c.DB != nil {
-		c.DB.Close()
-	}
 }

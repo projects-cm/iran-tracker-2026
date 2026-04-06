@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+
+	_ "github.com/tursodatabase/go-libsql"
 )
 
 // DB represents the database access layer
@@ -11,8 +13,17 @@ type DB struct {
 	db *sql.DB
 }
 
-// NewDB creates a new DB instance and initializes the schema
-func NewDB(db *sql.DB) (*DB, error) {
+// NewDB opens a connection to Turso and initializes the schema
+func NewDB(dbURL, authToken string) (*DB, error) {
+	connStr := fmt.Sprintf("%s?authToken=%s", dbURL, authToken)
+	db, err := sql.Open("libsql", connStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to turso: %w", err)
+	}
+	if err := db.Ping(); err != nil {
+		return nil, fmt.Errorf("failed to ping turso: %w", err)
+	}
+
 	d := &DB{db: db}
 	if err := d.initSchema(); err != nil {
 		return nil, err
@@ -67,11 +78,12 @@ func (d *DB) SeedInitialData(ctx context.Context) error {
 		Aliases []string
 	}{
 		{"Ali Khamenei", "علی خامنه‌ای", 1, []string{"Khamenei", "Supreme Leader"}},
-		{"Mojtaba Khamenei", "مجتبی خامنه‌ای", 1, []string{"Mojtaba"}},
-		{"Masoud Pezeshkian", "مسعود پزشکیان", 1, []string{"Pezeshkian"}},
+		{"Mojtaba Khamenei", "مجتبی خامنه‌ای", 2, []string{"Mojtaba"}},
+		{"Masoud Pezeshkian", "مسعود پزشکیان", 2, []string{"Pezeshkian"}},
 		{"Ahmad Vahidi", "احمد وحیدی", 2, []string{"Vahidi"}},
 		{"Hossein Salami", "حسین سلامی", 2, []string{"Salami"}},
-		{"Ebrahim Raisi", "ابراهیم رئیسی", 1, []string{"Raisi"}},
+		{"Esmail Qaani", "اسماعیل قاآنی", 3, []string{"Qaani", "Ghaani"}},
+		{"Amir Ali Hajizadeh", "امیرعلی حاجی‌زاده", 3, []string{"Hajizadeh"}},
 	}
 
 	for _, f := range figures {
@@ -83,7 +95,6 @@ func (d *DB) SeedInitialData(ctx context.Context) error {
 
 		id, _ := res.LastInsertId()
 		if id == 0 {
-			// Already exists, find ID
 			err = d.db.QueryRowContext(ctx, "SELECT id FROM figures WHERE canonical_name = ?", f.Name).Scan(&id)
 			if err != nil {
 				return fmt.Errorf("failed to find figure id %s: %w", f.Name, err)

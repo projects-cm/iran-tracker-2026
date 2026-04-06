@@ -21,9 +21,9 @@ func Compose(clients *Clients) http.Handler {
 	r.Use(middleware.Timeout(30))
 
 	// 2. Initialize DAL
-	dalRepo, err := dal.NewDB(clients.DB)
+	dalRepo, err := dal.NewDB(clients.TursoURL, clients.TursoToken)
 	if err != nil {
-		panic(err) // Normally handle carefully, panic okay for early init
+		panic(err)
 	}
 
 	// 3. Initialize Services
