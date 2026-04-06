@@ -11,10 +11,10 @@ run-frontend:
 	cd frontend && yarn dev
 
 seed:
-	cd backend && go run ./cmd/admin/seed.go
+	cd backend && go run ./cmd/admin/seed
 
 auth:
-	cd backend && go run ./cmd/admin/auth.go
+	cd backend && go run ./cmd/admin/auth
 
 # --- Testing ---
 
