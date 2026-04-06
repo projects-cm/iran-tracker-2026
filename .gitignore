@@ -27,6 +27,7 @@ backend/pkg/dal/*.db-wal
 backend/vendor/
 frontend/node_modules/
 frontend/dist/
+frontend/.vite/
 
 # System
 .DS_Store

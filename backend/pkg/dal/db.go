@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	_ "github.com/tursodatabase/libsql-client-go/libsql"
+	_ "modernc.org/sqlite"
 )
 
 // DB represents the database access layer
@@ -13,15 +14,26 @@ type DB struct {
 	db *sql.DB
 }
 
-// NewDB opens a connection to Turso and initializes the schema
+// NewDB opens a connection to Turso (production) or SQLite (testing)
 func NewDB(dbURL, authToken string) (*DB, error) {
-	connStr := fmt.Sprintf("%s?authToken=%s", dbURL, authToken)
-	db, err := sql.Open("libsql", connStr)
+	var driver, connStr string
+
+	// 1. Determine driver based on URL scheme
+	if len(dbURL) >= 5 && dbURL[:5] == "file:" {
+		driver = "sqlite"
+		connStr = dbURL
+	} else {
+		driver = "libsql"
+		connStr = fmt.Sprintf("%s?authToken=%s", dbURL, authToken)
+	}
+
+	// 2. Open connection
+	db, err := sql.Open(driver, connStr)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to turso: %w", err)
+		return nil, fmt.Errorf("failed to open database (%s): %w", driver, err)
 	}
 	if err := db.Ping(); err != nil {
-		return nil, fmt.Errorf("failed to ping turso: %w", err)
+		return nil, fmt.Errorf("failed to ping database (%s): %w", driver, err)
 	}
 
 	d := &DB{db: db}
