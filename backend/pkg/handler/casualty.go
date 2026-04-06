@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"iranian-tracker/pkg/service"
@@ -23,6 +24,7 @@ func NewCasualtyHandler(svc *service.CasualtyService) *CasualtyHandler {
 func (h *CasualtyHandler) GetFigures(w http.ResponseWriter, r *http.Request) {
 	figures, err := h.service.GetTrackerDashboard(r.Context())
 	if err != nil {
+		log.Printf("Error fetching tracker dashboard: %v", err)
 		http.Error(w, "Failed to fetch figures", http.StatusInternalServerError)
 		return
 	}

@@ -31,15 +31,22 @@ func NewDB(dbURL, authToken string) (*DB, error) {
 	return d, nil
 }
 
+func (d *DB) GetDB() *sql.DB {
+	return d.db
+}
+
 func (d *DB) initSchema() error {
 	schema := `
 	CREATE TABLE IF NOT EXISTS figures (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		canonical_name TEXT UNIQUE NOT NULL,
 		persian_name TEXT,
+		role TEXT,
 		tier INTEGER,
 		current_status TEXT,
-		last_update_id INTEGER
+		parent_id INTEGER,
+		last_update_id INTEGER,
+		FOREIGN KEY(parent_id) REFERENCES figures(id)
 	);
 
 	CREATE TABLE IF NOT EXISTS reports (
@@ -71,9 +78,9 @@ func (d *DB) initSchema() error {
 }
 
 // CreateFigure inserts a new figure and its aliases into the database
-func (d *DB) CreateFigure(ctx context.Context, name, persian string, tier int, status string, aliases []string) (int64, error) {
-	res, err := d.db.ExecContext(ctx, "INSERT OR IGNORE INTO figures (canonical_name, persian_name, tier, current_status) VALUES (?, ?, ?, ?)",
-		name, persian, tier, status)
+func (d *DB) CreateFigure(ctx context.Context, name, persian string, tier int, status string, role string, parentID *int, aliases []string) (int64, error) {
+	res, err := d.db.ExecContext(ctx, "INSERT OR IGNORE INTO figures (canonical_name, persian_name, tier, current_status, role, parent_id) VALUES (?, ?, ?, ?, ?, ?)",
+		name, persian, tier, status, role, parentID)
 	if err != nil {
 		return 0, fmt.Errorf("failed to insert figure %s: %w", name, err)
 	}
@@ -101,8 +108,10 @@ type Figure struct {
 	ID            int    `json:"id"`
 	CanonicalName string `json:"canonical_name"`
 	PersianName   string `json:"persian_name"`
+	Role          string `json:"role"`
 	Tier          int    `json:"tier"`
 	CurrentStatus string `json:"current_status"`
+	ParentID      *int   `json:"parent_id"`
 	LastUpdateID  int    `json:"last_update_id"`
 }
 
@@ -121,7 +130,7 @@ type Report struct {
 }
 
 func (d *DB) GetFigures(ctx context.Context) ([]Figure, error) {
-	rows, err := d.db.QueryContext(ctx, "SELECT id, canonical_name, persian_name, tier, current_status, last_update_id FROM figures")
+	rows, err := d.db.QueryContext(ctx, "SELECT id, canonical_name, persian_name, role, tier, current_status, parent_id, last_update_id FROM figures")
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +140,7 @@ func (d *DB) GetFigures(ctx context.Context) ([]Figure, error) {
 	for rows.Next() {
 		var f Figure
 		var lastUpdateID sql.NullInt64
-		if err := rows.Scan(&f.ID, &f.CanonicalName, &f.PersianName, &f.Tier, &f.CurrentStatus, &lastUpdateID); err != nil {
+		if err := rows.Scan(&f.ID, &f.CanonicalName, &f.PersianName, &f.Role, &f.Tier, &f.CurrentStatus, &f.ParentID, &lastUpdateID); err != nil {
 			return nil, err
 		}
 		if lastUpdateID.Valid {
