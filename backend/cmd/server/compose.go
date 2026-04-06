@@ -6,9 +6,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	// "iranian-tracker/pkg/handler"
-	// "iranian-tracker/pkg/service"
-	// "iranian-tracker/pkg/dal"
+	"iranian-tracker/pkg/dal"
+	"iranian-tracker/pkg/handler"
+	"iranian-tracker/pkg/service"
 )
 
 // Compose wires all layers together and returns the router
@@ -21,14 +21,17 @@ func Compose(clients *Clients) http.Handler {
 	r.Use(middleware.Timeout(30))
 
 	// 2. Initialize DAL
-	// dalRepo := dal.NewSQLiteDAL(clients.DB)
+	dalRepo, err := dal.NewDB(clients.DB)
+	if err != nil {
+		panic(err) // Normally handle carefully, panic okay for early init
+	}
 
 	// 3. Initialize Services
-	// casualtyService := service.NewCasualtyService(dalRepo)
+	casualtyService := service.NewCasualtyService(dalRepo)
 	// scraperService := service.NewScraperService(clients.Telegram, clients.Gemini, dalRepo)
 
 	// 4. Initialize Handlers
-	// casualtyHandler := handler.NewCasualtyHandler(casualtyService)
+	casualtyHandler := handler.NewCasualtyHandler(casualtyService)
 
 	// 5. Define Routes
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +40,7 @@ func Compose(clients *Clients) http.Handler {
 	})
 
 	r.Route("/api/v1", func(r chi.Router) {
-		// r.Get("/figures", casualtyHandler.GetFigures)
+		r.Get("/figures", casualtyHandler.GetFigures)
 		// r.Get("/figures/{id}/reports", casualtyHandler.GetReports)
 		// r.Get("/stats", casualtyHandler.GetStats)
 	})
