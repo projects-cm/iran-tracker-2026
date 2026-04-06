@@ -70,45 +70,30 @@ func (d *DB) initSchema() error {
 	return nil
 }
 
-func (d *DB) SeedInitialData(ctx context.Context) error {
-	figures := []struct {
-		Name    string
-		Persian string
-		Tier    int
-		Aliases []string
-	}{
-		{"Ali Khamenei", "علی خامنه‌ای", 1, []string{"Khamenei", "Supreme Leader"}},
-		{"Mojtaba Khamenei", "مجتبی خامنه‌ای", 2, []string{"Mojtaba"}},
-		{"Masoud Pezeshkian", "مسعود پزشکیان", 2, []string{"Pezeshkian"}},
-		{"Ahmad Vahidi", "احمد وحیدی", 2, []string{"Vahidi"}},
-		{"Hossein Salami", "حسین سلامی", 2, []string{"Salami"}},
-		{"Esmail Qaani", "اسماعیل قاآنی", 3, []string{"Qaani", "Ghaani"}},
-		{"Amir Ali Hajizadeh", "امیرعلی حاجی‌زاده", 3, []string{"Hajizadeh"}},
+// CreateFigure inserts a new figure and its aliases into the database
+func (d *DB) CreateFigure(ctx context.Context, name, persian string, tier int, status string, aliases []string) (int64, error) {
+	res, err := d.db.ExecContext(ctx, "INSERT OR IGNORE INTO figures (canonical_name, persian_name, tier, current_status) VALUES (?, ?, ?, ?)",
+		name, persian, tier, status)
+	if err != nil {
+		return 0, fmt.Errorf("failed to insert figure %s: %w", name, err)
 	}
 
-	for _, f := range figures {
-		res, err := d.db.ExecContext(ctx, "INSERT OR IGNORE INTO figures (canonical_name, persian_name, tier, current_status) VALUES (?, ?, ?, ?)",
-			f.Name, f.Persian, f.Tier, "Alive")
+	id, _ := res.LastInsertId()
+	if id == 0 {
+		err = d.db.QueryRowContext(ctx, "SELECT id FROM figures WHERE canonical_name = ?", name).Scan(&id)
 		if err != nil {
-			return fmt.Errorf("failed to insert figure %s: %w", f.Name, err)
-		}
-
-		id, _ := res.LastInsertId()
-		if id == 0 {
-			err = d.db.QueryRowContext(ctx, "SELECT id FROM figures WHERE canonical_name = ?", f.Name).Scan(&id)
-			if err != nil {
-				return fmt.Errorf("failed to find figure id %s: %w", f.Name, err)
-			}
-		}
-
-		for _, alias := range f.Aliases {
-			_, err = d.db.ExecContext(ctx, "INSERT OR IGNORE INTO aliases (entity_id, alias) VALUES (?, ?)", id, alias)
-			if err != nil {
-				return fmt.Errorf("failed to insert alias %s for %s: %w", alias, f.Name, err)
-			}
+			return 0, fmt.Errorf("failed to find figure id %s: %w", name, err)
 		}
 	}
-	return nil
+
+	for _, alias := range aliases {
+		_, err = d.db.ExecContext(ctx, "INSERT OR IGNORE INTO aliases (entity_id, alias) VALUES (?, ?)", id, alias)
+		if err != nil {
+			return 0, fmt.Errorf("failed to insert alias %s for %s: %w", alias, name, err)
+		}
+	}
+
+	return id, nil
 }
 
 // Figure represents an Iranian leadership entity
