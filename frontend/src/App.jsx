@@ -8,7 +8,7 @@ import { Activity } from 'lucide-react';
 const DUMMY_FIGURES = [
   {
     id: "1", parentId: null, name: "Ali Khamenei",
-    role: "Supreme Leader", status: "Alive", tier: 1,
+    role: "Supreme Leader", status: "Dead", tier: 1,
   },
   {
     id: "2", parentId: "1", name: "Mojtaba Khamenei",
@@ -123,6 +123,9 @@ function App() {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           nodeTypes={nodeTypes}
+          nodesDraggable={false}
+          nodesConnectable={false}
+          elementsSelectable={false}
           fitView
           fitViewOptions={{ padding: 0.3 }}
           className="bg-slate-950"
