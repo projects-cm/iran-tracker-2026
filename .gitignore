@@ -1,0 +1,33 @@
+# Binaries
+bin/
+main
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment Variables
+.env
+.env.local
+
+# Database
+backend/pkg/dal/*.db
+backend/pkg/dal/*.db-journal
+backend/pkg/dal/*.db-shm
+backend/pkg/dal/*.db-wal
+
+# Build/Work
+backend/vendor/
+frontend/node_modules/
+frontend/dist/
+
+# System
+.DS_Store
+Thumbs.db

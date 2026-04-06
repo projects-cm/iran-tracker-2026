@@ -1,0 +1,170 @@
+package dal
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+)
+
+// DB represents the database access layer
+type DB struct {
+	db *sql.DB
+}
+
+// NewDB creates a new DB instance and initializes the schema
+func NewDB(db *sql.DB) (*DB, error) {
+	d := &DB{db: db}
+	if err := d.initSchema(); err != nil {
+		return nil, err
+	}
+	return d, nil
+}
+
+func (d *DB) initSchema() error {
+	schema := `
+	CREATE TABLE IF NOT EXISTS figures (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		canonical_name TEXT UNIQUE NOT NULL,
+		persian_name TEXT,
+		tier INTEGER,
+		current_status TEXT,
+		last_update_id INTEGER
+	);
+
+	CREATE TABLE IF NOT EXISTS reports (
+		message_id INTEGER PRIMARY KEY,
+		source TEXT NOT NULL,
+		headline TEXT NOT NULL,
+		raw_text TEXT,
+		confidence_level INTEGER,
+		status TEXT,
+		previous_status TEXT,
+		tier INTEGER,
+		timestamp TEXT NOT NULL,
+		entity_id INTEGER,
+		FOREIGN KEY(entity_id) REFERENCES figures(id)
+	);
+
+	CREATE TABLE IF NOT EXISTS aliases (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		entity_id INTEGER,
+		alias TEXT UNIQUE NOT NULL,
+		FOREIGN KEY(entity_id) REFERENCES figures(id)
+	);
+	`
+	_, err := d.db.Exec(schema)
+	if err != nil {
+		return fmt.Errorf("failed to initialize schema: %w", err)
+	}
+	return nil
+}
+
+func (d *DB) SeedInitialData(ctx context.Context) error {
+	figures := []struct {
+		Name    string
+		Persian string
+		Tier    int
+		Aliases []string
+	}{
+		{"Ali Khamenei", "علی خامنه‌ای", 1, []string{"Khamenei", "Supreme Leader"}},
+		{"Mojtaba Khamenei", "مجتبی خامنه‌ای", 1, []string{"Mojtaba"}},
+		{"Masoud Pezeshkian", "مسعود پزشکیان", 1, []string{"Pezeshkian"}},
+		{"Ahmad Vahidi", "احمد وحیدی", 2, []string{"Vahidi"}},
+		{"Hossein Salami", "حسین سلامی", 2, []string{"Salami"}},
+		{"Ebrahim Raisi", "ابراهیم رئیسی", 1, []string{"Raisi"}},
+	}
+
+	for _, f := range figures {
+		res, err := d.db.ExecContext(ctx, "INSERT OR IGNORE INTO figures (canonical_name, persian_name, tier, current_status) VALUES (?, ?, ?, ?)",
+			f.Name, f.Persian, f.Tier, "Alive")
+		if err != nil {
+			return fmt.Errorf("failed to insert figure %s: %w", f.Name, err)
+		}
+
+		id, _ := res.LastInsertId()
+		if id == 0 {
+			// Already exists, find ID
+			err = d.db.QueryRowContext(ctx, "SELECT id FROM figures WHERE canonical_name = ?", f.Name).Scan(&id)
+			if err != nil {
+				return fmt.Errorf("failed to find figure id %s: %w", f.Name, err)
+			}
+		}
+
+		for _, alias := range f.Aliases {
+			_, err = d.db.ExecContext(ctx, "INSERT OR IGNORE INTO aliases (entity_id, alias) VALUES (?, ?)", id, alias)
+			if err != nil {
+				return fmt.Errorf("failed to insert alias %s for %s: %w", alias, f.Name, err)
+			}
+		}
+	}
+	return nil
+}
+
+// Figure represents an Iranian leadership entity
+type Figure struct {
+	ID            int    `json:"id"`
+	CanonicalName string `json:"canonical_name"`
+	PersianName   string `json:"persian_name"`
+	Tier          int    `json:"tier"`
+	CurrentStatus string `json:"current_status"`
+	LastUpdateID  int    `json:"last_update_id"`
+}
+
+// Report represents a status update for a figure
+type Report struct {
+	MessageID       int    `json:"message_id"`
+	Source          string `json:"source"`
+	Headline        string `json:"headline"`
+	RawText         string `json:"raw_text"`
+	ConfidenceLevel int    `json:"confidence_level"`
+	Status          string `json:"status"`
+	PreviousStatus  string `json:"previous_status"`
+	Tier            int    `json:"tier"`
+	Timestamp       string `json:"timestamp"`
+	EntityID        int    `json:"entity_id"`
+}
+
+func (d *DB) GetFigures(ctx context.Context) ([]Figure, error) {
+	rows, err := d.db.QueryContext(ctx, "SELECT id, canonical_name, persian_name, tier, current_status, last_update_id FROM figures")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var figures []Figure
+	for rows.Next() {
+		var f Figure
+		var lastUpdateID sql.NullInt64
+		if err := rows.Scan(&f.ID, &f.CanonicalName, &f.PersianName, &f.Tier, &f.CurrentStatus, &lastUpdateID); err != nil {
+			return nil, err
+		}
+		if lastUpdateID.Valid {
+			f.LastUpdateID = int(lastUpdateID.Int64)
+		}
+		figures = append(figures, f)
+	}
+	return figures, nil
+}
+
+func (d *DB) AddReport(ctx context.Context, r Report) error {
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO reports (message_id, source, headline, raw_text, confidence_level, status, previous_status, tier, timestamp, entity_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		r.MessageID, r.Source, r.Headline, r.RawText, r.ConfidenceLevel, r.Status, r.PreviousStatus, r.Tier, r.Timestamp, r.EntityID)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.ExecContext(ctx, "UPDATE figures SET current_status = ?, last_update_id = ? WHERE id = ?", r.Status, r.MessageID, r.EntityID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
