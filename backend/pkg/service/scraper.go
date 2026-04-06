@@ -14,27 +14,35 @@ import (
 
 // ScraperService handles scraping messages from Telegram channels
 type ScraperService struct {
-	client    *telegram.Client
-	api       *tg.Client
-	db        *dal.DB
-	processor *ProcessorService
-	casualty  *CasualtyService
+	client         *telegram.Client
+	api            *tg.Client
+	db             *dal.DB
+	processor      *ProcessorService
+	casualty       *CasualtyService
+	simulationMode bool
 }
 
 // NewScraperService creates a new ScraperService instance
-func NewScraperService(client *telegram.Client, db *dal.DB, processor *ProcessorService, casualty *CasualtyService) *ScraperService {
+func NewScraperService(client *telegram.Client, db *dal.DB, processor *ProcessorService, casualty *CasualtyService, simulationMode bool) *ScraperService {
 	return &ScraperService{
-		client:    client,
-		api:       client.API(),
-		db:        db,
-		processor: processor,
-		casualty:  casualty,
+		client:         client,
+		api:            client.API(),
+		db:             db,
+		processor:      processor,
+		casualty:       casualty,
+		simulationMode: simulationMode,
 	}
 }
 
 // StartScraping begins monitoring the target channels
 func (s *ScraperService) StartScraping(ctx context.Context, targetChannels []string) error {
 	log.Println("Starting Telegram Scraper...")
+
+	// Launch Simulation Mode if enabled
+	if s.simulationMode {
+		log.Println("🛠️ Simulation Mode ENABLED - Injecting fake reports for testing.")
+		go s.runSimulation(ctx)
+	}
 
 	// Connect to Telegram
 	return s.client.Run(ctx, func(ctx context.Context) error {
@@ -162,6 +170,52 @@ func (s *ScraperService) processMessages(ctx context.Context, messages []tg.Mess
 		err = s.casualty.ProcessNewReport(tsCtx, ext, msg.Message, sourceName, msg.ID)
 		if err != nil {
 			log.Printf("Failed to process report for msg %d: %v", msg.ID, err)
+		}
+	}
+}
+
+// runSimulation injects fake data for testing without live API keys
+func (s *ScraperService) runSimulation(ctx context.Context) {
+	ticker := time.NewTicker(60 * time.Second)
+	defer ticker.Stop()
+
+	// Initial delay
+	time.Sleep(5 * time.Second)
+
+	fakeReports := []struct {
+		EntityID int
+		Status   string
+		Headline string
+	}{
+		{6, "Dead", "CONFIRMED: Esmail Qaani killed in strike on Quds Force headquarters in Damascus."},
+		{7, "Dead", "BREAKING: Amir Ali Hajizadeh reported deceased following direct hit on Isfahan aerospace plant."},
+		{4, "Critically Wounded", "Ahmad Vahidi in critical condition after heavy shelling in Tehran."},
+		{5, "Alive", "Hossein Salami appears on state TV, refuting rumors of his elimination."},
+		{2, "Missing", "Where is Mojtaba Khamenei? Silence from the Supreme Leader's inner circle for 48 hours."},
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			// Pick a random fake report
+			report := fakeReports[rand.Intn(len(fakeReports))]
+			
+			ext := &ExtractionResult{
+				EntityID:   report.EntityID,
+				Confidence: 95,
+				Status:     report.Status,
+				Headline:   report.Headline,
+			}
+			
+			log.Printf("🧪 [SIMULATION] Injecting report for Entity %d...", report.EntityID)
+			
+			tsCtx := context.WithValue(ctx, "timestamp", time.Now().Format(time.RFC3339))
+			err := s.casualty.ProcessNewReport(tsCtx, ext, report.Headline, "Intel-Sim", rand.Intn(1000000))
+			if err != nil {
+				log.Printf("Simulation injection failed: %v", err)
+			}
 		}
 	}
 }

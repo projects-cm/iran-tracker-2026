@@ -16,10 +16,11 @@ import (
 
 // Clients holds all external service configuration
 type Clients struct {
-	TursoURL   string
-	TursoToken string
-	Gemini     *genai.Client
-	Telegram   *telegram.Client
+	TursoURL       string
+	TursoToken     string
+	Gemini         *genai.Client
+	Telegram       *telegram.Client
+	SimulationMode bool
 }
 
 // InitClients reads environment variables for all external connections
@@ -66,12 +67,16 @@ func InitClients() (*Clients, error) {
 		SessionStorage: &session.FileStorage{Path: sessionFile},
 	})
 
+	// Optional: Simulation Mode for testing without real keys
+	simulationMode := os.Getenv("SIMULATION_MODE") == "true"
+
 	log.Println("Client configuration loaded successfully")
 
 	return &Clients{
-		TursoURL:   tursoURL,
-		TursoToken: tursoToken,
-		Gemini:     genaiClient,
-		Telegram:   telegramClient,
+		TursoURL:       tursoURL,
+		TursoToken:     tursoToken,
+		Gemini:         genaiClient,
+		Telegram:       telegramClient,
+		SimulationMode: simulationMode,
 	}, nil
 }

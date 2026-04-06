@@ -30,7 +30,7 @@ func Compose(clients *Clients) (http.Handler, *service.ScraperService) {
 	// 3. Initialize Services
 	casualtyService := service.NewCasualtyService(dalRepo)
 	processorService := service.NewProcessorService(clients.Gemini)
-	scraperService := service.NewScraperService(clients.Telegram, dalRepo, processorService, casualtyService)
+	scraperService := service.NewScraperService(clients.Telegram, dalRepo, processorService, casualtyService, clients.SimulationMode)
 
 	// 4. Initialize Handlers
 	casualtyHandler := handler.NewCasualtyHandler(casualtyService)
