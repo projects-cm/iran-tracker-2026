@@ -80,7 +80,7 @@ func (s *ScraperService) scrapeChannelRoutine(ctx context.Context, username stri
 
 // resolveUsername uses contacts.resolveUsername to get peer details
 func (s *ScraperService) resolveUsername(ctx context.Context, username string) (tg.InputPeerClass, error) {
-	res, err := s.api.ContactsResolveUsername(ctx, username)
+	res, err := s.api.ContactsResolveUsername(ctx, &tg.ContactsResolveUsernameRequest{Username: username})
 	if err != nil {
 		return nil, err
 	}
