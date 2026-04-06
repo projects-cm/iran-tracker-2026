@@ -14,8 +14,11 @@ import (
 
 func main() {
 	// 1. Initial configuration
-	if err := godotenv.Load("../../.env"); err != nil {
-		log.Println("No .env file found, using platform environment variables")
+	if err := godotenv.Load("../.env"); err != nil {
+		log.Println("No .env file found at ../.env, checking current directory...")
+		if err := godotenv.Load(); err != nil {
+			log.Println("No .env file found in current directory either.")
+		}
 	}
 
 	// 2. Initialize Clients (Database, external APIs, etc.)
