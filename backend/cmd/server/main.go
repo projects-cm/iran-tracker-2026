@@ -23,7 +23,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Initialization error: %v", err)
 	}
-	defer clients.Close()
 
 	// 3. Compose layers (Handlers -> Services -> DAL) and build router
 	router := Compose(clients)
