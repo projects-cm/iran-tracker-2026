@@ -36,8 +36,16 @@ func NewProcessorService(client *genai.Client) *ProcessorService {
 		Type: genai.TypeObject,
 		Properties: map[string]*genai.Schema{
 			"entityId": {
-				Type:        genai.TypeInteger,
-				Description: "The ID of the tracked figure (1: Ali Khamenei, 2: Mojtaba Khamenei, 3: Masoud Pezeshkian, 4: Ahmad Vahidi, 5: Hossein Salami, 6: Ebrahim Raisi). Use 0 if no figure is mentioned.",
+				Type: genai.TypeInteger,
+				Description: "The ID of the tracked figure: " +
+					"1: Ali Khamenei (Supreme Leader), " +
+					"2: Mojtaba Khamenei (Son/Possible Successor), " +
+					"3: Masoud Pezeshkian (President), " +
+					"4: Ahmad Vahidi (SNSC), " +
+					"5: Hossein Salami (IRGC), " +
+					"6: Esmail Qaani (Quds Force), " +
+					"7: Amir Ali Hajizadeh (Aerospace Force). " +
+					"Use 0 if no figure is mentioned.",
 			},
 			"confidence": {
 				Type:        genai.TypeInteger,

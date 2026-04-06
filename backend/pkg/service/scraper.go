@@ -9,22 +9,26 @@ import (
 
 	"github.com/gotd/td/telegram"
 	"github.com/gotd/td/tg"
-	// "iran-tracker/pkg/dal"
+	"iranian-tracker/pkg/dal"
 )
 
 // ScraperService handles scraping messages from Telegram channels
 type ScraperService struct {
-	client *telegram.Client
-	api    *tg.Client
-	// dal    *dal.DB
+	client    *telegram.Client
+	api       *tg.Client
+	db        *dal.DB
+	processor *ProcessorService
+	casualty  *CasualtyService
 }
 
 // NewScraperService creates a new ScraperService instance
-func NewScraperService(client *telegram.Client) *ScraperService {
+func NewScraperService(client *telegram.Client, db *dal.DB, processor *ProcessorService, casualty *CasualtyService) *ScraperService {
 	return &ScraperService{
-		client: client,
-		api:    client.API(),
-		// dal:    db,
+		client:    client,
+		api:       client.API(),
+		db:        db,
+		processor: processor,
+		casualty:  casualty,
 	}
 }
 
@@ -64,7 +68,7 @@ func (s *ScraperService) scrapeChannelRoutine(ctx context.Context, username stri
 			return
 		default:
 			// Fetch the latest messages (e.g., limit 10)
-			err := s.fetchRecentMessages(ctx, peer)
+			err := s.fetchRecentMessages(ctx, peer, username)
 			if err != nil {
 				log.Printf("Error fetching messages from %s: %v", username, err)
 			}
@@ -96,7 +100,7 @@ func (s *ScraperService) resolveUsername(ctx context.Context, username string) (
 }
 
 // fetchRecentMessages retrieves and processes new messages from the peer
-func (s *ScraperService) fetchRecentMessages(ctx context.Context, peer tg.InputPeerClass) error {
+func (s *ScraperService) fetchRecentMessages(ctx context.Context, peer tg.InputPeerClass, sourceName string) error {
 	// This makes an API call to messages.getHistory
 	res, err := s.api.MessagesGetHistory(ctx, &tg.MessagesGetHistoryRequest{
 		Peer:  peer,
@@ -110,13 +114,13 @@ func (s *ScraperService) fetchRecentMessages(ctx context.Context, peer tg.InputP
 	switch history := res.(type) {
 	case *tg.MessagesMessages:
 		messagesCount = len(history.Messages)
-		s.processMessages(history.Messages)
+		s.processMessages(ctx, history.Messages, sourceName)
 	case *tg.MessagesMessagesSlice:
 		messagesCount = len(history.Messages)
-		s.processMessages(history.Messages)
+		s.processMessages(ctx, history.Messages, sourceName)
 	case *tg.MessagesChannelMessages:
 		messagesCount = len(history.Messages)
-		s.processMessages(history.Messages)
+		s.processMessages(ctx, history.Messages, sourceName)
 	default:
 		return fmt.Errorf("unexpected history type")
 	}
@@ -126,18 +130,38 @@ func (s *ScraperService) fetchRecentMessages(ctx context.Context, peer tg.InputP
 }
 
 // processMessages takes raw Telegram messages and sends them to the Processor
-func (s *ScraperService) processMessages(messages []tg.MessageClass) {
+func (s *ScraperService) processMessages(ctx context.Context, messages []tg.MessageClass, sourceName string) {
 	for _, rawMsg := range messages {
 		msg, ok := rawMsg.(*tg.Message)
-		if !ok {
-			continue // skip empty or service messages
-		}
-		if msg.Message == "" {
+		if !ok || msg.Message == "" {
 			continue
 		}
-		
-		// Here we would typically check if we already processed msg.ID from our DAL
-		// then forward msg.Message to the Gemini ProcessorService
-		log.Printf("New raw message (ID: %d): %.50s...", msg.ID, msg.Message)
+
+		// 1. Deduplication: Check if we've already handled this message
+		processed, err := s.db.IsReportProcessed(ctx, msg.ID)
+		if err != nil {
+			log.Printf("Error checking deduplication for msg %d: %v", msg.ID, err)
+			continue
+		}
+		if processed {
+			continue
+		}
+
+		log.Printf("Processing NEW message from %s (ID: %d): %.50s...", sourceName, msg.ID, msg.Message)
+
+		// 2. Intelligence Extraction: Ask Gemini what this means
+		ext, err := s.processor.ProcessRawText(ctx, msg.Message, sourceName)
+		if err != nil {
+			log.Printf("Gemini extraction failed for msg %d: %v", msg.ID, err)
+			continue
+		}
+
+		// 3. Status Update: Apply logic to the Figure and persist the report
+		// Inject a temporary timestamp if missing
+		tsCtx := context.WithValue(ctx, "timestamp", time.Now().Format(time.RFC3339))
+		err = s.casualty.ProcessNewReport(tsCtx, ext, msg.Message, sourceName, msg.ID)
+		if err != nil {
+			log.Printf("Failed to process report for msg %d: %v", msg.ID, err)
+		}
 	}
 }

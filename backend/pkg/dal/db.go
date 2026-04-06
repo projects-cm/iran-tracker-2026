@@ -163,13 +163,21 @@ func (d *DB) AddReport(ctx context.Context, r Report) error {
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		r.MessageID, r.Source, r.Headline, r.RawText, r.ConfidenceLevel, r.Status, r.PreviousStatus, r.Tier, r.Timestamp, r.EntityID)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to insert report: %w", err)
 	}
 
 	_, err = tx.ExecContext(ctx, "UPDATE figures SET current_status = ?, last_update_id = ? WHERE id = ?", r.Status, r.MessageID, r.EntityID)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to update figure status: %w", err)
 	}
 
 	return tx.Commit()
+}
+
+// IsReportProcessed checks if a message ID has already been handled
+func (d *DB) IsReportProcessed(ctx context.Context, msgID int) (bool, error) {
+	var exists bool
+	query := "SELECT EXISTS(SELECT 1 FROM reports WHERE message_id = ?)"
+	err := d.db.QueryRowContext(ctx, query, msgID).Scan(&exists)
+	return exists, err
 }

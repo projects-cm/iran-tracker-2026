@@ -12,8 +12,8 @@ import (
 	"iranian-tracker/pkg/service"
 )
 
-// Compose wires all layers together and returns the router
-func Compose(clients *Clients) http.Handler {
+// Compose wires all layers together and returns the router and scraper
+func Compose(clients *Clients) (http.Handler, *service.ScraperService) {
 	r := chi.NewRouter()
 
 	// 1. Common Middleware
@@ -29,7 +29,8 @@ func Compose(clients *Clients) http.Handler {
 
 	// 3. Initialize Services
 	casualtyService := service.NewCasualtyService(dalRepo)
-	// scraperService := service.NewScraperService(clients.Telegram, clients.Gemini, dalRepo)
+	processorService := service.NewProcessorService(clients.Gemini)
+	scraperService := service.NewScraperService(clients.Telegram, dalRepo, processorService, casualtyService)
 
 	// 4. Initialize Handlers
 	casualtyHandler := handler.NewCasualtyHandler(casualtyService)
@@ -42,9 +43,7 @@ func Compose(clients *Clients) http.Handler {
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/figures", casualtyHandler.GetFigures)
-		// r.Get("/figures/{id}/reports", casualtyHandler.GetReports)
-		// r.Get("/stats", casualtyHandler.GetStats)
 	})
 
-	return r
+	return r, scraperService
 }
