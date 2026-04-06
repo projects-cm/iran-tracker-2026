@@ -28,9 +28,21 @@ func main() {
 	}
 
 	// 3. Compose layers (Handlers -> Services -> DAL) and build router
-	router := Compose(clients)
+	router, scraper := Compose(clients)
 
-	// 4. Start the server
+	// 4. Define Target Channels to Monitor
+	targets := []string{"amitsegal", "abualiexpress"}
+
+	// 5. Start the Scraper in the background
+	scraperCtx, scraperCancel := context.WithCancel(context.Background())
+	defer scraperCancel()
+	go func() {
+		if err := scraper.StartScraping(scraperCtx, targets); err != nil {
+			log.Printf("⚠️ Scraper error: %v", err)
+		}
+	}()
+
+	// 6. Start the HTTP server
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"

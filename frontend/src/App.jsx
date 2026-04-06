@@ -40,6 +40,8 @@ function buildGraph(data) {
   const nodes = [];
   const edges = [];
 
+  if (!data || data.length === 0) return { nodes, edges };
+
   // Count items per tier for horizontal layout
   const tierCounts = {};
   const tierOffsets = {};
@@ -51,30 +53,30 @@ function buildGraph(data) {
   data.forEach((fig) => {
     const count = tierCounts[fig.tier];
     const offset = tierOffsets[fig.tier];
-    const spacing = 280;
+    const spacing = 300;
     const x = (offset - (count - 1) / 2) * spacing;
-    const y = (fig.tier - 1) * 220;
+    const y = (fig.tier - 1) * 240;
 
     tierOffsets[fig.tier]++;
 
     nodes.push({
-      id: fig.id,
+      id: String(fig.id),
       type: 'figureNode',
-      position: { x: 600 + x, y: y + 50 },
+      position: { x: 500 + x, y: y + 50 },
       data: {
-        name: fig.name,
+        name: fig.canonical_name,
         role: fig.role,
-        status: fig.status,
+        status: fig.current_status,
       },
     });
 
-    if (fig.parentId) {
+    if (fig.parent_id) {
       edges.push({
-        id: `e${fig.parentId}-${fig.id}`,
-        source: fig.parentId,
-        target: fig.id,
+        id: `e${fig.parent_id}-${fig.id}`,
+        source: String(fig.parent_id),
+        target: String(fig.id),
         type: 'smoothstep',
-        animated: fig.status !== 'Dead',
+        animated: fig.current_status !== 'Dead',
         style: { stroke: 'rgba(255, 255, 255, 0.15)', strokeWidth: 2 },
       });
     }
@@ -84,17 +86,47 @@ function buildGraph(data) {
 }
 
 function App() {
-  const { nodes: initialNodes, edges: initialEdges } = useMemo(() => buildGraph(DUMMY_FIGURES), []);
-  const [nodes, setNodes] = useState(initialNodes);
-  const [edges, setEdges] = useState(initialEdges);
+  const [figures, setFigures] = useState([]);
+  const [nodes, setNodes] = useState([]);
+  const [edges, setEdges] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch('/api/v1/figures');
+        const data = await response.json();
+        setFigures(data);
+        const { nodes: newNodes, edges: newEdges } = buildGraph(data);
+        setNodes(newNodes);
+        setEdges(newEdges);
+      } catch (error) {
+        console.error("Failed to fetch intel:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const nodeTypes = useMemo(() => ({ figureNode: FigureNode }), []);
 
   const onNodesChange = useCallback((changes) => setNodes((nds) => applyNodeChanges(changes, nds)), []);
   const onEdgesChange = useCallback((changes) => setEdges((eds) => applyEdgeChanges(changes, eds)), []);
 
-  const aliveCount = DUMMY_FIGURES.filter(f => f.status === 'Alive').length;
-  const deadCount = DUMMY_FIGURES.filter(f => ['Dead', 'Presumed Dead'].includes(f.status)).length;
+  const aliveCount = figures.filter(f => f.current_status === 'Alive').length;
+  const deadCount = figures.filter(f => ['Dead', 'Presumed Dead'].includes(f.current_status)).length;
+
+  if (loading) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-slate-950">
+        <div className="flex flex-col items-center gap-4">
+          <Activity className="w-12 h-12 text-green-500 animate-pulse" />
+          <div className="text-slate-400 font-mono tracking-widest animate-pulse">CONNECTING TO INTEL NETWORK...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen w-full flex flex-col bg-slate-950">
@@ -108,10 +140,10 @@ function App() {
           </h1>
         </div>
         <div className="flex gap-6 text-sm text-slate-400 font-mono">
-          <span>{DUMMY_FIGURES.length} Targets</span>
+          <span>{figures.length} Targets</span>
           <span className="text-green-400">{aliveCount} Alive</span>
           <span className="text-red-400">{deadCount} KIA</span>
-          <span className="text-green-400">● System Online</span>
+          <span className="text-green-400">● Live Feed</span>
         </div>
       </header>
 
