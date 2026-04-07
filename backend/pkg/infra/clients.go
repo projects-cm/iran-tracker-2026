@@ -1,9 +1,8 @@
-package main
+package infra
 
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -27,18 +26,18 @@ type Clients struct {
 func InitClients() (*Clients, error) {
 	tursoURL := os.Getenv("TURSO_DATABASE_URL")
 	if tursoURL == "" {
-		log.Fatal("TURSO_DATABASE_URL is required")
+		return nil, fmt.Errorf("TURSO_DATABASE_URL is required")
 	}
 
 	tursoToken := os.Getenv("TURSO_AUTH_TOKEN")
 	if tursoToken == "" {
-		log.Fatal("TURSO_AUTH_TOKEN is required")
+		return nil, fmt.Errorf("TURSO_AUTH_TOKEN is required")
 	}
 
 	// Gemini Initialization
 	geminiKey := os.Getenv("GEMINI_API_KEY")
 	if geminiKey == "" {
-		log.Fatal("GEMINI_API_KEY is required")
+		return nil, fmt.Errorf("GEMINI_API_KEY is required")
 	}
 	genaiClient, err := genai.NewClient(context.Background(), option.WithAPIKey(geminiKey))
 	if err != nil {
@@ -48,29 +47,29 @@ func InitClients() (*Clients, error) {
 	// Telegram Initialization
 	apiIDStr := os.Getenv("TELEGRAM_API_ID")
 	apiHash := os.Getenv("TELEGRAM_API_HASH")
-	if apiIDStr == "" || apiHash == "" {
-		log.Fatal("TELEGRAM_API_ID and TELEGRAM_API_HASH are required")
-	}
-	apiID, err := strconv.Atoi(apiIDStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid TELEGRAM_API_ID: %w", err)
-	}
+	
+	// Optional in serverless mode (if we don't need real-time scraping)
+	var telegramClient *telegram.Client
+	if apiIDStr != "" && apiHash != "" {
+		apiID, err := strconv.Atoi(apiIDStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid TELEGRAM_API_ID: %w", err)
+		}
 
-	// Setup session storage
-	sessionDir := ".session"
-	if err := os.MkdirAll(sessionDir, 0700); err != nil {
-		return nil, err
-	}
-	sessionFile := filepath.Join(sessionDir, "session.json")
+		// Setup session storage
+		sessionDir := ".session"
+		if err := os.MkdirAll(sessionDir, 0700); err != nil {
+			return nil, err
+		}
+		sessionFile := filepath.Join(sessionDir, "session.json")
 
-	telegramClient := telegram.NewClient(apiID, apiHash, telegram.Options{
-		SessionStorage: &session.FileStorage{Path: sessionFile},
-	})
+		telegramClient = telegram.NewClient(apiID, apiHash, telegram.Options{
+			SessionStorage: &session.FileStorage{Path: sessionFile},
+		})
+	}
 
 	// Optional: Simulation Mode for testing without real keys
 	simulationMode := os.Getenv("SIMULATION_MODE") == "true"
-
-	log.Println("Client configuration loaded successfully")
 
 	return &Clients{
 		TursoURL:       tursoURL,

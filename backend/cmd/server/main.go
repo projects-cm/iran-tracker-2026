@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"iranian-tracker/pkg/infra"
 )
 
 // rehydrateTelegramSession checks for session data in env and writes it to disk
@@ -56,7 +57,7 @@ func main() {
 	}
 
 	// 2. Initialize Clients (Database, external APIs, etc.)
-	clients, err := InitClients()
+	clients, err := infra.InitClients()
 	if err != nil {
 		log.Fatalf("Initialization error: %v", err)
 	}
@@ -67,7 +68,18 @@ func main() {
 	// 4. Define Target Channels to Monitor
 	targets := []string{"amitsegal", "abualiexpress"}
 
-	// 5. Start the Scraper in the background
+	// 5. Handle Pulse Mode (One-off scrape for GitHub Actions)
+	if os.Getenv("PULSE_MODE") == "true" {
+		log.Println("🛰️ Pulse Mode DETECTED - Running one-off scraping cycle.")
+		// Using a standard context for the pulse
+		if err := scraper.StartScrapingPulse(context.Background(), targets); err != nil {
+			log.Fatalf("⚠️ Pulse scrape failed: %v", err)
+		}
+		log.Println("✅ Pulse complete. Exiting.")
+		os.Exit(0)
+	}
+
+	// 6. Start the Scraper in the background
 	scraperCtx, scraperCancel := context.WithCancel(context.Background())
 	defer scraperCancel()
 	go func() {

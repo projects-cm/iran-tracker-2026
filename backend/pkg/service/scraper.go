@@ -34,6 +34,33 @@ func NewScraperService(client *telegram.Client, db *dal.DB, processor *Processor
 	}
 }
 
+// StartScrapingPulse performs a single iteration for all targets and returns
+func (s *ScraperService) StartScrapingPulse(ctx context.Context, targetChannels []string) error {
+	log.Printf("🛰️ Starting Pulse Scrape for %d targets...", len(targetChannels))
+	
+	return s.client.Run(ctx, func(ctx context.Context) error {
+		log.Println("Successfully connected and authenticated with Telegram.")
+
+		for _, username := range targetChannels {
+			log.Printf("Pulse-fetching messages for %s...", username)
+			// Resolve the username to an InputPeer
+			peer, err := s.resolveUsername(ctx, username)
+			if err != nil {
+				log.Printf("Failed to resolve channel %s: %v", username, err)
+				continue
+			}
+			
+			// Fetch the latest messages (e.g., limit 10)
+			if err := s.fetchRecentMessages(ctx, peer, username); err != nil {
+				log.Printf("Error fetching messages from %s: %v", username, err)
+			}
+		}
+
+		log.Println("✅ Pulse cycle complete. Shutting down.")
+		return nil
+	})
+}
+
 // StartScraping begins monitoring the target channels
 func (s *ScraperService) StartScraping(ctx context.Context, targetChannels []string) error {
 	log.Println("Starting Telegram Scraper...")
