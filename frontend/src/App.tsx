@@ -1,51 +1,20 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { ReactFlow, Controls, Background, applyNodeChanges, applyEdgeChanges } from '@xyflow/react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import { ReactFlow, Controls, Background, applyNodeChanges, applyEdgeChanges, Node, Edge, OnNodesChange, OnEdgesChange, NodeTypes } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import FigureNode from './FigureNode';
 import BannerAd from './components/BannerAd';
 import { Activity } from 'lucide-react';
+import { Figure, FigureNodeData } from './types';
 
-// Dummy data embedded for local development (based on real Iranian leadership structure)
-const DUMMY_FIGURES = [
-  {
-    id: "1", parentId: null, name: "Ali Khamenei",
-    role: "Supreme Leader", status: "Dead", tier: 1,
-  },
-  {
-    id: "2", parentId: "1", name: "Mojtaba Khamenei",
-    role: "Son of Supreme Leader", status: "Missing", tier: 2,
-  },
-  {
-    id: "3", parentId: "1", name: "Hossein Salami",
-    role: "Commander of IRGC", status: "Alive", tier: 2,
-  },
-  {
-    id: "4", parentId: "1", name: "Ahmad Vahidi",
-    role: "Secretary of SNSC", status: "Critically Wounded", tier: 2,
-  },
-  {
-    id: "5", parentId: "3", name: "Esmail Qaani",
-    role: "Commander Quds Force", status: "Presumed Dead", tier: 3,
-  },
-  {
-    id: "6", parentId: "3", name: "Amir Ali Hajizadeh",
-    role: "Commander Aerospace Force", status: "Dead", tier: 3,
-  },
-  {
-    id: "7", parentId: "4", name: "Masoud Pezeshkian",
-    role: "President", status: "Missing", tier: 3,
-  },
-];
-
-function buildGraph(data) {
-  const nodes = [];
-  const edges = [];
+function buildGraph(data: Figure[]) {
+  const nodes: Node<FigureNodeData>[] = [];
+  const edges: Edge[] = [];
 
   if (!data || data.length === 0) return { nodes, edges };
 
   // Count items per tier for horizontal layout
-  const tierCounts = {};
-  const tierOffsets = {};
+  const tierCounts: Record<number, number> = {};
+  const tierOffsets: Record<number, number> = {};
   data.forEach(fig => {
     tierCounts[fig.tier] = (tierCounts[fig.tier] || 0) + 1;
     tierOffsets[fig.tier] = 0;
@@ -87,16 +56,16 @@ function buildGraph(data) {
 }
 
 function App() {
-  const [figures, setFigures] = useState([]);
-  const [nodes, setNodes] = useState([]);
-  const [edges, setEdges] = useState([]);
+  const [figures, setFigures] = useState<Figure[]>([]);
+  const [nodes, setNodes] = useState<Node<FigureNodeData>[]>([]);
+  const [edges, setEdges] = useState<Edge[]>([]);
   const [loading, setLoading] = useState(true);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchData = async () => {
       try {
         const response = await fetch('/api/v1/figures');
-        const data = await response.json();
+        const data: Figure[] = await response.json();
         setFigures(data);
         const { nodes: newNodes, edges: newEdges } = buildGraph(data);
         setNodes(newNodes);
@@ -110,10 +79,13 @@ function App() {
     fetchData();
   }, []);
 
-  const nodeTypes = useMemo(() => ({ figureNode: FigureNode }), []);
+  const nodeTypes = useMemo(() => ({ figureNode: FigureNode }), []) as unknown as NodeTypes;
 
-  const onNodesChange = useCallback((changes) => setNodes((nds) => applyNodeChanges(changes, nds)), []);
-  const onEdgesChange = useCallback((changes) => setEdges((eds) => applyEdgeChanges(changes, eds)), []);
+  const onNodesChange: OnNodesChange = useCallback(
+    (changes) => setNodes((nds) => applyNodeChanges(changes, nds) as Node<FigureNodeData>[]),
+    []
+  );
+  const onEdgesChange: OnEdgesChange = useCallback((changes) => setEdges((eds) => applyEdgeChanges(changes, eds)), []);
 
   const aliveCount = figures.filter(f => f.current_status === 'Alive').length;
   const deadCount = figures.filter(f => ['Dead', 'Presumed Dead'].includes(f.current_status)).length;
