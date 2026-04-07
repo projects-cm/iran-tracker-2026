@@ -1,11 +1,13 @@
 {
   "version": 2,
   "public": false,
+  "experimentalServices": {
+    "api": {
+      "entrypoint": "backend/api/index.go",
+      "routePrefix": "/api"
+    }
+  },
   "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/index.go"
-    },
     {
       "source": "/(.*)",
       "destination": "/frontend/dist/$1"
