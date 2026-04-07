@@ -81,8 +81,8 @@ func (s *ScraperService) scrapeChannelRoutine(ctx context.Context, username stri
 				log.Printf("Error fetching messages from %s: %v", username, err)
 			}
 
-			// Implement human-like jitter (random delay between 2 and 10 seconds)
-			jitterSecs := rand.Intn(9) + 2
+			// Implement conservative jitter for free-tier Gemini (30-60 seconds)
+			jitterSecs := rand.Intn(31) + 30
 			jitterDuration := time.Duration(jitterSecs) * time.Second
 			log.Printf("Sleeping for %v before next fetch for %s...", jitterDuration, username)
 			time.Sleep(jitterDuration)

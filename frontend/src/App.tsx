@@ -6,6 +6,8 @@ import BannerAd from './components/BannerAd';
 import { Activity } from 'lucide-react';
 import { Figure, FigureNodeData } from './types';
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+
 function buildGraph(data: Figure[]) {
   const nodes: Node<FigureNodeData>[] = [];
   const edges: Edge[] = [];
@@ -64,7 +66,7 @@ function App() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('/api/v1/figures');
+        const response = await fetch(`${API_BASE}/api/v1/figures`);
         const data: Figure[] = await response.json();
         setFigures(data);
         const { nodes: newNodes, edges: newEdges } = buildGraph(data);

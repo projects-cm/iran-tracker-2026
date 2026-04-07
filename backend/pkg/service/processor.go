@@ -28,7 +28,7 @@ type ExtractionResult struct {
 // NewProcessorService initializes the Gemini model connection
 func NewProcessorService(client *genai.Client) *ProcessorService {
 	// Configure the model to return JSON
-	model := client.GenerativeModel("gemini-1.5-flash-latest")
+	model := client.GenerativeModel("gemini-flash-latest")
 	model.ResponseMIMEType = "application/json"
 	
 	// Create the JSON schema for structured output

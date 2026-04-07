@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"log"
 	"net/http"
 	"os"
@@ -12,8 +13,41 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// rehydrateTelegramSession checks for session data in env and writes it to disk
+func rehydrateTelegramSession() {
+	sessionData := os.Getenv("TELEGRAM_SESSION_DATA")
+	if sessionData == "" {
+		log.Println("No TELEGRAM_SESSION_DATA found in environment, proceeding with local file if it exists.")
+		return
+	}
+
+	data, err := base64.StdEncoding.DecodeString(sessionData)
+	if err != nil {
+		log.Printf("⚠️ Failed to decode TELEGRAM_SESSION_DATA: %v", err)
+		return
+	}
+
+	// Ensure the directory exists
+	sessionDir := ".session"
+	if err := os.MkdirAll(sessionDir, 0755); err != nil {
+		log.Printf("⚠️ Failed to create session directory: %v", err)
+		return
+	}
+
+	sessionPath := sessionDir + "/session.json"
+	if err := os.WriteFile(sessionPath, data, 0600); err != nil {
+		log.Printf("⚠️ Failed to write session file: %v", err)
+		return
+	}
+
+	log.Printf("✅ Successfully rehydrated Telegram session to %s", sessionPath)
+}
+
 func main() {
-	// 1. Initial configuration
+	// 1. Rehydrate session if available
+	rehydrateTelegramSession()
+
+	// 2. Initial configuration
 	if err := godotenv.Load("../.env"); err != nil {
 		log.Println("No .env file found at ../.env, checking current directory...")
 		if err := godotenv.Load(); err != nil {
