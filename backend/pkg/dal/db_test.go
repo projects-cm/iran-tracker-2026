@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"testing"
+	"time"
 )
 
 func TestDB_IsReportProcessed(t *testing.T) {
@@ -38,11 +39,14 @@ func TestDB_IsReportProcessed(t *testing.T) {
 		EntityID:        int(figID),
 	}
 
-	// Message should NOT be processed yet
-	processed, err := db.IsReportProcessed(ctx, 12345, "Test Source")
+	// Message should NOT be processed yet (using a unique ID for the test)
+	uniqueMsgID := 99999 + int(time.Now().UnixNano()%100000)
+	processed, err := db.IsReportProcessed(ctx, uniqueMsgID, "Test Source")
 	if err != nil || processed {
-		t.Errorf("Expected msg 12345 to NOT be processed, got: %v, %v", processed, err)
+		t.Errorf("Expected msg %d to NOT be processed, got: %v, %v", uniqueMsgID, processed, err)
 	}
+
+	report.MessageID = uniqueMsgID
 
 	// Add the report
 	if err := db.AddReport(ctx, report); err != nil {

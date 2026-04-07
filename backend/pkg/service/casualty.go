@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"iranian-tracker/pkg/dal"
+	"iranian-tracker/backend/pkg/dal"
 )
 
 // CasualtyService handles business logic related to casualty statuses and reporting

@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
-	"iranian-tracker/pkg/dal"
+	"iranian-tracker/backend/pkg/dal"
 )
 
 func ptr[T any](v T) *T {

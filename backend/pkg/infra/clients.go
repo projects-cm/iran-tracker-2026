@@ -79,3 +79,10 @@ func InitClients() (*Clients, error) {
 		SimulationMode: simulationMode,
 	}, nil
 }
+
+// Close releases all external service resources
+func (c *Clients) Close() {
+	if c.Gemini != nil {
+		c.Gemini.Close()
+	}
+}

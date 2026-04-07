@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"iranian-tracker/pkg/service"
+	"iranian-tracker/backend/pkg/service"
 )
 
 // CasualtyHandler handles HTTP requests related to the tracker dashboard

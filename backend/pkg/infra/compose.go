@@ -8,9 +8,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	"iranian-tracker/pkg/dal"
-	"iranian-tracker/pkg/handler"
-	"iranian-tracker/pkg/service"
+	"iranian-tracker/backend/pkg/dal"
+	"iranian-tracker/backend/pkg/handler"
+	"iranian-tracker/backend/pkg/service"
 )
 
 // Compose wires all layers together and returns the router and scraper

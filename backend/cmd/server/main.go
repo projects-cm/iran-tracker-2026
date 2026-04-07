@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"iranian-tracker/pkg/infra"
+	"iranian-tracker/backend/pkg/infra"
 )
 
 // rehydrateTelegramSession checks for session data in env and writes it to disk
@@ -63,7 +63,7 @@ func main() {
 	}
 
 	// 3. Compose layers (Handlers -> Services -> DAL) and build router
-	router, scraper := Compose(clients)
+	router, scraper := infra.Compose(clients)
 
 	// 4. Define Target Channels to Monitor
 	targets := []string{"amitsegal", "abualiexpress"}
