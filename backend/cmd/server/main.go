@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"log"
 	"net/http"
 	"os"
@@ -10,10 +11,44 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"iranian-tracker/pkg/infra"
 )
 
+// rehydrateTelegramSession checks for session data in env and writes it to disk
+func rehydrateTelegramSession() {
+	sessionData := os.Getenv("TELEGRAM_SESSION_DATA")
+	if sessionData == "" {
+		log.Println("No TELEGRAM_SESSION_DATA found in environment, proceeding with local file if it exists.")
+		return
+	}
+
+	data, err := base64.StdEncoding.DecodeString(sessionData)
+	if err != nil {
+		log.Printf("⚠️ Failed to decode TELEGRAM_SESSION_DATA: %v", err)
+		return
+	}
+
+	// Ensure the directory exists
+	sessionDir := ".session"
+	if err := os.MkdirAll(sessionDir, 0755); err != nil {
+		log.Printf("⚠️ Failed to create session directory: %v", err)
+		return
+	}
+
+	sessionPath := sessionDir + "/session.json"
+	if err := os.WriteFile(sessionPath, data, 0600); err != nil {
+		log.Printf("⚠️ Failed to write session file: %v", err)
+		return
+	}
+
+	log.Printf("✅ Successfully rehydrated Telegram session to %s", sessionPath)
+}
+
 func main() {
-	// 1. Initial configuration
+	// 1. Rehydrate session if available
+	rehydrateTelegramSession()
+
+	// 2. Initial configuration
 	if err := godotenv.Load("../.env"); err != nil {
 		log.Println("No .env file found at ../.env, checking current directory...")
 		if err := godotenv.Load(); err != nil {
@@ -22,7 +57,7 @@ func main() {
 	}
 
 	// 2. Initialize Clients (Database, external APIs, etc.)
-	clients, err := InitClients()
+	clients, err := infra.InitClients()
 	if err != nil {
 		log.Fatalf("Initialization error: %v", err)
 	}
@@ -33,7 +68,18 @@ func main() {
 	// 4. Define Target Channels to Monitor
 	targets := []string{"amitsegal", "abualiexpress"}
 
-	// 5. Start the Scraper in the background
+	// 5. Handle Pulse Mode (One-off scrape for GitHub Actions)
+	if os.Getenv("PULSE_MODE") == "true" {
+		log.Println("🛰️ Pulse Mode DETECTED - Running one-off scraping cycle.")
+		// Using a standard context for the pulse
+		if err := scraper.StartScrapingPulse(context.Background(), targets); err != nil {
+			log.Fatalf("⚠️ Pulse scrape failed: %v", err)
+		}
+		log.Println("✅ Pulse complete. Exiting.")
+		os.Exit(0)
+	}
+
+	// 6. Start the Scraper in the background
 	scraperCtx, scraperCancel := context.WithCancel(context.Background())
 	defer scraperCancel()
 	go func() {

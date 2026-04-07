@@ -1,4 +1,4 @@
-package main
+package infra
 
 import (
 	"encoding/json"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"iranian-tracker/pkg/dal"
 	"iranian-tracker/pkg/handler"
 	"iranian-tracker/pkg/service"
@@ -20,6 +21,16 @@ func Compose(clients *Clients) (http.Handler, *service.ScraperService) {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(30 * time.Second))
+
+	// 2. CORS
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"https://*", "http://localhost:5173"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}))
 
 	// 2. Initialize DAL
 	dalRepo, err := dal.NewDB(clients.TursoURL, clients.TursoToken)
