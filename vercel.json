@@ -1,6 +1,11 @@
 {
   "version": 2,
   "public": false,
+  "functions": {
+    "backend/api/index.go": {
+      "runtime": "vercel-go@latest"
+    }
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",
