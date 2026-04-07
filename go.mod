@@ -1,6 +1,8 @@
 module iranian-tracker
 
-go 1.26.1
+go 1.25.1
+
+replace iranian-tracker => ./backend
 
 require (
 	github.com/go-chi/chi/v5 v5.2.5
