@@ -62,7 +62,7 @@ func (d *DB) initSchema() error {
 	);
 
 	CREATE TABLE IF NOT EXISTS reports (
-		message_id INTEGER PRIMARY KEY,
+		message_id INTEGER,
 		source TEXT NOT NULL,
 		headline TEXT NOT NULL,
 		raw_text TEXT,
@@ -72,7 +72,15 @@ func (d *DB) initSchema() error {
 		tier INTEGER,
 		timestamp TEXT NOT NULL,
 		entity_id INTEGER,
+		PRIMARY KEY (message_id, source),
 		FOREIGN KEY(entity_id) REFERENCES figures(id)
+	);
+
+	CREATE TABLE IF NOT EXISTS processed_messages (
+		message_id INTEGER,
+		source TEXT NOT NULL,
+		processed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		PRIMARY KEY (message_id, source)
 	);
 
 	CREATE TABLE IF NOT EXISTS aliases (
@@ -172,7 +180,11 @@ func (d *DB) AddReport(ctx context.Context, r Report) error {
 
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO reports (message_id, source, headline, raw_text, confidence_level, status, previous_status, tier, timestamp, entity_id)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(message_id, source) DO UPDATE SET
+			headline = excluded.headline,
+			status = excluded.status,
+			timestamp = excluded.timestamp`,
 		r.MessageID, r.Source, r.Headline, r.RawText, r.ConfidenceLevel, r.Status, r.PreviousStatus, r.Tier, r.Timestamp, r.EntityID)
 	if err != nil {
 		return fmt.Errorf("failed to insert report: %w", err)
@@ -183,13 +195,26 @@ func (d *DB) AddReport(ctx context.Context, r Report) error {
 		return fmt.Errorf("failed to update figure status: %w", err)
 	}
 
+	// Also mark as processed in the deduplication table
+	_, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO processed_messages (message_id, source) VALUES (?, ?)", r.MessageID, r.Source)
+	if err != nil {
+		return fmt.Errorf("failed to mark as processed in transaction: %w", err)
+	}
+
 	return tx.Commit()
 }
 
-// IsReportProcessed checks if a message ID has already been handled
-func (d *DB) IsReportProcessed(ctx context.Context, msgID int) (bool, error) {
+// IsReportProcessed checks if a message ID from a specific source has already been handled
+func (d *DB) IsReportProcessed(ctx context.Context, msgID int, source string) (bool, error) {
 	var exists bool
-	query := "SELECT EXISTS(SELECT 1 FROM reports WHERE message_id = ?)"
-	err := d.db.QueryRowContext(ctx, query, msgID).Scan(&exists)
+	query := "SELECT EXISTS(SELECT 1 FROM processed_messages WHERE message_id = ? AND source = ?)"
+	err := d.db.QueryRowContext(ctx, query, msgID, source).Scan(&exists)
 	return exists, err
+}
+
+// MarkMessageAsProcessed saves the message ID and source to the deduplication table
+func (d *DB) MarkMessageAsProcessed(ctx context.Context, msgID int, source string) error {
+	query := "INSERT OR IGNORE INTO processed_messages (message_id, source) VALUES (?, ?)"
+	_, err := d.db.ExecContext(ctx, query, msgID, source)
+	return err
 }

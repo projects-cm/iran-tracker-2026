@@ -156,8 +156,8 @@ func (s *ScraperService) processMessages(ctx context.Context, messages []tg.Mess
 			continue
 		}
 
-		// 1. Deduplication: Check if we've already handled this message
-		processed, err := s.db.IsReportProcessed(ctx, msg.ID)
+		// 1. Deduplication: Check if we've already handled this message (source-aware)
+		processed, err := s.db.IsReportProcessed(ctx, msg.ID, sourceName)
 		if err != nil {
 			log.Printf("Error checking deduplication for msg %d: %v", msg.ID, err)
 			continue
@@ -172,16 +172,21 @@ func (s *ScraperService) processMessages(ctx context.Context, messages []tg.Mess
 		ext, err := s.processor.ProcessRawText(ctx, msg.Message, sourceName)
 		if err != nil {
 			log.Printf("Gemini extraction failed for msg %d: %v", msg.ID, err)
+			// Still mark as processed even if Gemini fails (e.g. noise or rate limit)
+			// so we don't spam the API with the same problematic message.
+			_ = s.db.MarkMessageAsProcessed(ctx, msg.ID, sourceName)
 			continue
 		}
 
 		// 3. Status Update: Apply logic to the Figure and persist the report
-		// Inject a temporary timestamp if missing
 		tsCtx := context.WithValue(ctx, "timestamp", time.Now().Format(time.RFC3339))
 		err = s.casualty.ProcessNewReport(tsCtx, ext, msg.Message, sourceName, msg.ID)
 		if err != nil {
 			log.Printf("Failed to process report for msg %d: %v", msg.ID, err)
 		}
+
+		// 4. Cache: Mark as processed regardless of whether it contained intel
+		_ = s.db.MarkMessageAsProcessed(ctx, msg.ID, sourceName)
 	}
 }
 
