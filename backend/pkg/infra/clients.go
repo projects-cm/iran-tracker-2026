@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/google/generative-ai-go/genai"
 	"github.com/gotd/td/session"
@@ -24,18 +25,18 @@ type Clients struct {
 
 // InitClients reads environment variables for all external connections
 func InitClients() (*Clients, error) {
-	tursoURL := os.Getenv("TURSO_DATABASE_URL")
+	tursoURL := strings.TrimSpace(os.Getenv("TURSO_DATABASE_URL"))
 	if tursoURL == "" {
 		return nil, fmt.Errorf("TURSO_DATABASE_URL is required")
 	}
 
-	tursoToken := os.Getenv("TURSO_AUTH_TOKEN")
+	tursoToken := strings.TrimSpace(os.Getenv("TURSO_AUTH_TOKEN"))
 	if tursoToken == "" {
 		return nil, fmt.Errorf("TURSO_AUTH_TOKEN is required")
 	}
 
 	// Gemini Initialization
-	geminiKey := os.Getenv("GEMINI_API_KEY")
+	geminiKey := strings.TrimSpace(os.Getenv("GEMINI_API_KEY"))
 	if geminiKey == "" {
 		return nil, fmt.Errorf("GEMINI_API_KEY is required")
 	}
@@ -45,8 +46,8 @@ func InitClients() (*Clients, error) {
 	}
 
 	// Telegram Initialization
-	apiIDStr := os.Getenv("TELEGRAM_API_ID")
-	apiHash := os.Getenv("TELEGRAM_API_HASH")
+	apiIDStr := strings.TrimSpace(os.Getenv("TELEGRAM_API_ID"))
+	apiHash := strings.TrimSpace(os.Getenv("TELEGRAM_API_HASH"))
 	
 	// Optional in serverless mode (if we don't need real-time scraping)
 	var telegramClient *telegram.Client

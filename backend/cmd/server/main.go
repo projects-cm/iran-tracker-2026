@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+	"strings"
 
 	"github.com/joho/godotenv"
 	"iranian-tracker/backend/pkg/infra"
@@ -16,7 +17,7 @@ import (
 
 // rehydrateTelegramSession checks for session data in env and writes it to disk
 func rehydrateTelegramSession() {
-	sessionData := os.Getenv("TELEGRAM_SESSION_DATA")
+	sessionData := strings.TrimSpace(os.Getenv("TELEGRAM_SESSION_DATA"))
 	if sessionData == "" {
 		log.Println("No TELEGRAM_SESSION_DATA found in environment, proceeding with local file if it exists.")
 		return
