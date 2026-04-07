@@ -32,3 +32,6 @@ frontend/.vite/
 # System
 .DS_Store
 Thumbs.db
+
+# Telegram Session
+backend/.session/

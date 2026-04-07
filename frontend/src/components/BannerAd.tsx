@@ -1,25 +1,15 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { AD_CONFIG } from '../config/ads';
 
-/**
- * BannerAd
- *
- * Renders an ad slot defined in config/ads.js.
- * - If the slot has an `html` snippet, it injects it via dangerouslySetInnerHTML
- *   (needed for ad network <script> or <iframe> tags).
- * - If no snippet is provided, renders a placeholder so you can see sizing.
- * - If the master switch or the slot's own switch is off, renders nothing.
- *
- * Usage:
- *   <BannerAd slot="leaderboard" />
- *   <BannerAd slot="sidebar" />
- */
-export default function BannerAd({ slot }) {
-  const containerRef = useRef(null);
+interface BannerAdProps {
+  slot: string;
+}
+
+export default function BannerAd({ slot }: BannerAdProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const slotConfig = AD_CONFIG?.slots?.[slot];
 
-  // Master kill-switch or slot disabled
   if (!AD_CONFIG.enabled || !slotConfig?.enabled) return null;
 
   const { html, label, fallbackWidth, fallbackHeight } = slotConfig;
@@ -37,7 +27,6 @@ export default function BannerAd({ slot }) {
         padding: '6px 0 4px',
       }}
     >
-      {/* Tiny label above ad */}
       <span
         style={{
           fontSize: '9px',
@@ -52,14 +41,12 @@ export default function BannerAd({ slot }) {
       </span>
 
       {html ? (
-        /* Live ad network snippet */
         <div
           ref={containerRef}
           dangerouslySetInnerHTML={{ __html: html }}
           style={{ maxWidth: fallbackWidth, width: '100%' }}
         />
       ) : (
-        /* Placeholder shown until you paste a real snippet */
         <div
           style={{
             width: Math.min(fallbackWidth, window.innerWidth - 32),
@@ -75,7 +62,7 @@ export default function BannerAd({ slot }) {
             borderRadius: '4px',
           }}
         >
-          [ AD SLOT: {slot} — {fallbackWidth}×{fallbackHeight} ]
+          {`[ AD SLOT: ${slot} — ${fallbackWidth}×${fallbackHeight} ]`}
         </div>
       )}
     </div>
