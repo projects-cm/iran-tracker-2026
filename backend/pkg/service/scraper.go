@@ -9,7 +9,7 @@ import (
 
 	"github.com/gotd/td/telegram"
 	"github.com/gotd/td/tg"
-	"iranian-tracker/pkg/dal"
+	"iranian-tracker/backend/pkg/dal"
 )
 
 // ScraperService handles scraping messages from Telegram channels
