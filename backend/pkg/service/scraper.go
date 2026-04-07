@@ -90,7 +90,7 @@ func (s *ScraperService) scrapeChannelRoutine(ctx context.Context, username stri
 	}
 }
 
-// resolveUsername uses contacts.resolveUsername to get peer details
+// resolveUsername uses contacts.resolveUsername to get peer details and joins if necessary
 func (s *ScraperService) resolveUsername(ctx context.Context, username string) (tg.InputPeerClass, error) {
 	res, err := s.api.ContactsResolveUsername(ctx, &tg.ContactsResolveUsernameRequest{Username: username})
 	if err != nil {
@@ -98,6 +98,17 @@ func (s *ScraperService) resolveUsername(ctx context.Context, username string) (
 	}
 	for _, chat := range res.GetChats() {
 		if channel, ok := chat.(*tg.Channel); ok {
+			// Automatically join the channel to ensure we can fetch history
+			_, err := s.api.ChannelsJoinChannel(ctx, &tg.InputChannel{
+				ChannelID:  channel.ID,
+				AccessHash: channel.AccessHash,
+			})
+			if err != nil {
+				log.Printf("Note: Could not explicitly join %s (may already be a member): %v", username, err)
+			} else {
+				log.Printf("Successfully joined channel: %s", username)
+			}
+
 			return &tg.InputPeerChannel{
 				ChannelID:  channel.ID,
 				AccessHash: channel.AccessHash,
