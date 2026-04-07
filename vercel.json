@@ -5,16 +5,12 @@
     "api": {
       "entrypoint": "backend/api/index.go",
       "routePrefix": "/api"
-    },
-    "client": {
-      "entrypoint": "frontend/package.json",
-      "routePrefix": "/"
     }
   },
   "rewrites": [
     {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "destination": "/frontend/$1"
     }
   ],
   "headers": [
