@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { ReactFlow, Controls, Background, applyNodeChanges, applyEdgeChanges } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import FigureNode from './FigureNode';
+import BannerAd from './components/BannerAd';
 import { Activity } from 'lucide-react';
 
 // Dummy data embedded for local development (based on real Iranian leadership structure)
@@ -146,6 +147,9 @@ function App() {
           <span className="text-green-400">● Live Feed</span>
         </div>
       </header>
+
+      {/* Leaderboard Ad — below header, above graph */}
+      <BannerAd slot="leaderboard" />
 
       {/* React Flow Canvas */}
       <main className="flex-1 w-full relative">
