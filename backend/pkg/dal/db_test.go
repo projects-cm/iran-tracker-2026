@@ -39,7 +39,7 @@ func TestDB_IsReportProcessed(t *testing.T) {
 	}
 
 	// Message should NOT be processed yet
-	processed, err := db.IsReportProcessed(ctx, 12345)
+	processed, err := db.IsReportProcessed(ctx, 12345, "Test Source")
 	if err != nil || processed {
 		t.Errorf("Expected msg 12345 to NOT be processed, got: %v, %v", processed, err)
 	}
@@ -50,7 +50,7 @@ func TestDB_IsReportProcessed(t *testing.T) {
 	}
 
 	// Message should now BE processed
-	processed, err = db.IsReportProcessed(ctx, 12345)
+	processed, err = db.IsReportProcessed(ctx, 12345, "Test Source")
 	if err != nil || !processed {
 		t.Errorf("Expected msg 12345 to BE processed, got: %v, %v", processed, err)
 	}
