@@ -1,10 +1,15 @@
 {
   "version": 2,
   "public": false,
+  "functions": {
+    "backend/api/index.go": {
+      "runtime": "vercel-go@0.6.0"
+    }
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api/index.go"
+      "destination": "/backend/api/index.go"
     },
     {
       "source": "/(.*)",
