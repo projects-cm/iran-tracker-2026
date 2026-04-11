@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "public": false,
   "experimentalServices": {
     "api": {
       "entrypoint": "backend/api/index.go",
@@ -9,23 +8,12 @@
   },
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "/backend/api/index.go"
+      "source": "/api/v1/:path*",
+      "destination": "/api/v1/:path*"
     },
     {
-      "source": "/(.*)",
-      "destination": "/$1"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
-        }
-      ]
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
     }
   ]
 }
