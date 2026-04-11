@@ -1,31 +1,19 @@
 {
   "version": 2,
-  "public": false,
   "experimentalServices": {
     "api": {
       "entrypoint": "backend/api/index.go",
-      "routePrefix": "/api/v1"
+      "routePrefix": "/api"
     }
   },
   "rewrites": [
     {
-      "source": "/((?!api/v1/).*)",
-      "destination": "/index.html"
-    }
-  ],
-  "headers": [
+      "source": "/api/v1/:path*",
+      "destination": "/api/v1/:path*"
+    },
     {
-      "source": "/api/v1/(.*)",
-      "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
-        },
-        {
-          "key": "Cache-Control",
-          "value": "no-store, max-age=0"
-        }
-      ]
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
     }
   ]
 }
