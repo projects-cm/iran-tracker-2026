@@ -25,3 +25,6 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	// 3. Delegate to chi router
 	router.ServeHTTP(w, r)
 }
+
+func main() {
+}
