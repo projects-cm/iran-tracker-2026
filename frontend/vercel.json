@@ -7,23 +7,24 @@
       "routePrefix": "/api/v1"
     }
   },
-  "rewrites": [
-    {
-      "source": "/api/v1/:path*",
-      "destination": "/api/v1/:path*"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/frontend/dist/$1"
-    }
-  ],
   "routes": [
+    {
+      "src": "/api/v1/(.*)",
+      "dest": "/api/v1/$1",
+      "continue": true
+    },
     {
       "handle": "filesystem"
     },
     {
       "src": "/(.*)",
-      "dest": "/frontend/dist/index.html"
+      "dest": "/index.html"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
