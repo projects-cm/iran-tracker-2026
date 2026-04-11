@@ -1,6 +1,6 @@
 {
-  "version": 2,
-  "public": false,
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "services",
   "experimentalServices": {
     "api": {
       "entrypoint": "backend/api/index.go",
@@ -9,23 +9,12 @@
   },
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "/backend/api/index.go"
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
     },
     {
-      "source": "/(.*)",
-      "destination": "/$1"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
-        }
-      ]
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
     }
   ]
 }
