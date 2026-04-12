@@ -53,6 +53,10 @@ func Compose(clients *Clients) (http.Handler, *service.ScraperService, error) {
 		json.NewEncoder(w).Encode(map[string]string{"status": "up"})
 	})
 
+	r.Route("/v1", func(r chi.Router) {
+		r.Get("/figures", casualtyHandler.GetFigures)
+	})
+
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/figures", casualtyHandler.GetFigures)
 	})

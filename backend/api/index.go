@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 	"sync"
 
 	"iranian-tracker/backend/pkg/infra"
@@ -51,4 +52,18 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	once.Do(initialize)
+	if initErr != nil {
+		log.Fatalf("Fatal initialization error: %v", initErr)
+	}
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080" // Default for local or specific testing
+	}
+
+	log.Printf("Starting Vercel Go Microservice on :%s", port)
+	if err := http.ListenAndServe(":"+port, globalRouter); err != nil {
+		log.Fatalf("Server exited ungracefully: %v", err)
+	}
 }
