@@ -24,9 +24,14 @@ type ScraperService struct {
 
 // NewScraperService creates a new ScraperService instance
 func NewScraperService(client *telegram.Client, db *dal.DB, processor *ProcessorService, casualty *CasualtyService, simulationMode bool) *ScraperService {
+	var api *tg.Client
+	if client != nil {
+		api = client.API()
+	}
+
 	return &ScraperService{
 		client:         client,
-		api:            client.API(),
+		api:            api,
 		db:             db,
 		processor:      processor,
 		casualty:       casualty,

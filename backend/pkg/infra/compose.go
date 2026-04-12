@@ -2,6 +2,7 @@ package infra
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -14,7 +15,7 @@ import (
 )
 
 // Compose wires all layers together and returns the router and scraper
-func Compose(clients *Clients) (http.Handler, *service.ScraperService) {
+func Compose(clients *Clients) (http.Handler, *service.ScraperService, error) {
 	r := chi.NewRouter()
 
 	// 1. Common Middleware
@@ -35,7 +36,7 @@ func Compose(clients *Clients) (http.Handler, *service.ScraperService) {
 	// 2. Initialize DAL
 	dalRepo, err := dal.NewDB(clients.TursoURL, clients.TursoToken)
 	if err != nil {
-		panic(err)
+		return nil, nil, fmt.Errorf("dal init error: %w", err)
 	}
 
 	// 3. Initialize Services
@@ -52,9 +53,13 @@ func Compose(clients *Clients) (http.Handler, *service.ScraperService) {
 		json.NewEncoder(w).Encode(map[string]string{"status": "up"})
 	})
 
+	r.Route("/v1", func(r chi.Router) {
+		r.Get("/figures", casualtyHandler.GetFigures)
+	})
+
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/figures", casualtyHandler.GetFigures)
 	})
 
-	return r, scraperService
+	return r, scraperService, nil
 }

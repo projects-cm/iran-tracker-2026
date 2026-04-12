@@ -64,7 +64,10 @@ func main() {
 	}
 
 	// 3. Compose layers (Handlers -> Services -> DAL) and build router
-	router, scraper := infra.Compose(clients)
+	router, scraper, err := infra.Compose(clients)
+	if err != nil {
+		log.Fatalf("Compose error: %v", err)
+	}
 
 	// 4. Define Target Channels to Monitor
 	targets := []string{"amitsegal", "abualiexpress"}
