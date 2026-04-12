@@ -58,7 +58,7 @@ func InitClients() (*Clients, error) {
 		}
 
 		// Setup session storage
-		sessionDir := ".session"
+		sessionDir := "/tmp/.session"
 		if err := os.MkdirAll(sessionDir, 0700); err != nil {
 			return nil, err
 		}
