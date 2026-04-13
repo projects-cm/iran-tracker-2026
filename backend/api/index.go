@@ -1,21 +1,18 @@
 package main
 
 import (
-	"context"
 	"log"
 	"net/http"
 	"os"
 	"sync"
 
 	"iranian-tracker/backend/pkg/infra"
-	"iranian-tracker/backend/pkg/service"
 )
 
 var (
-	globalRouter  http.Handler
-	globalScraper *service.ScraperService
-	initErr       error
-	once          sync.Once
+	globalRouter http.Handler
+	initErr      error
+	once         sync.Once
 )
 
 func initialize() {
@@ -26,13 +23,12 @@ func initialize() {
 		return
 	}
 
-	r, scraper, err := infra.Compose(clients)
+	r, _, err := infra.Compose(clients)
 	if err != nil {
 		initErr = err
 		return
 	}
 	globalRouter = r
-	globalScraper = scraper
 }
 
 func Handler(w http.ResponseWriter, r *http.Request) {
@@ -59,16 +55,6 @@ func main() {
 	once.Do(initialize)
 	if initErr != nil {
 		log.Fatalf("Fatal initialization error: %v", initErr)
-	}
-
-	if globalScraper != nil {
-		scraperCtx := context.Background() // Safe as this is stay-alive service
-		go func() {
-			log.Printf("Starting background scraper on Vercel for targets: %v", infra.TargetChannels)
-			if err := globalScraper.StartScraping(scraperCtx, infra.TargetChannels); err != nil {
-				log.Printf("⚠️ Scraper error: %v", err)
-			}
-		}()
 	}
 
 	port := os.Getenv("PORT")

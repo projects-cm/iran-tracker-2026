@@ -7,12 +7,13 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
-	"strings"
+
+	"iranian-tracker/backend/pkg/infra"
 
 	"github.com/joho/godotenv"
-	"iranian-tracker/backend/pkg/infra"
 )
 
 // rehydrateTelegramSession checks for session data in env and writes it to disk
@@ -70,7 +71,7 @@ func main() {
 	}
 
 	// 4. Define Target Channels to Monitor
-	targets := infra.TargetChannels
+	targets := []string{"amitsegal", "abualiexpress"}
 
 	// 5. Handle Pulse Mode (One-off scrape for GitHub Actions)
 	if os.Getenv("PULSE_MODE") == "true" {

@@ -46,6 +46,7 @@ func Compose(clients *Clients) (http.Handler, *service.ScraperService, error) {
 
 	// 4. Initialize Handlers
 	casualtyHandler := handler.NewCasualtyHandler(casualtyService)
+	scraperHandler := handler.NewScraperHandler(scraperService, TargetChannels)
 
 	// 5. Define Routes
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -55,10 +56,12 @@ func Compose(clients *Clients) (http.Handler, *service.ScraperService, error) {
 
 	r.Route("/v1", func(r chi.Router) {
 		r.Get("/figures", casualtyHandler.GetFigures)
+		r.Get("/pulse", scraperHandler.TriggerPulse)
 	})
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/figures", casualtyHandler.GetFigures)
+		r.Get("/pulse", scraperHandler.TriggerPulse)
 	})
 
 	return r, scraperService, nil
