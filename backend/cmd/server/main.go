@@ -70,7 +70,7 @@ func main() {
 	}
 
 	// 4. Define Target Channels to Monitor
-	targets := []string{"amitsegal", "abualiexpress"}
+	targets := infra.TargetChannels
 
 	// 5. Handle Pulse Mode (One-off scrape for GitHub Actions)
 	if os.Getenv("PULSE_MODE") == "true" {
