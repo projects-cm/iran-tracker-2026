@@ -41,7 +41,12 @@ func NewScraperService(client *telegram.Client, db *dal.DB, processor *Processor
 
 // StartScrapingPulse performs a single iteration for all targets and returns
 func (s *ScraperService) StartScrapingPulse(ctx context.Context, targetChannels []string) error {
+	if s.client == nil {
+		return fmt.Errorf("telegram client is not initialized (missing TELEGRAM_API_ID or TELEGRAM_API_HASH in Vercel)")
+	}
+
 	log.Printf("🛰️ Starting Pulse Scrape for %d targets...", len(targetChannels))
+
 	
 	return s.client.Run(ctx, func(ctx context.Context) error {
 		log.Println("Successfully connected and authenticated with Telegram.")
